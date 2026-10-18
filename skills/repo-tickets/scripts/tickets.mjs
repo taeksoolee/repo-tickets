@@ -22,6 +22,31 @@ const LEGACY_DIR_RE = /(?<![A-Za-z0-9_-])docs\/works\b/;
 const BARE_RE = /(?<![\w/[-])((?:bug|task|epic)-[a-z0-9]+(?:-[a-z0-9]+)*)(?![\w-]|\]\])/g;
 // 자연어 번호 참조: "080 티켓", "티켓 150", "150번 일감". 번호는 우선순위라 참조로 쓸 수 없다.
 const PROSE_NUM_RE = /(?:티켓|일감|ticket)\s*#?(\d{3})(?!\d)|(?<![\d.,:])(\d{3})\s*(?:번\s*)?(?:티켓|일감)/gi;
+// 파일명 꼴 참조: `150_task-foo.md`, `20260930_070_bug-x`. 경로가 없어도 확실한 일감 참조다.
+const FILENAME_RE = /(?<![\w-])(?:\d{8}_)?(\d{3})_((?:bug|task|epic)-[a-z0-9]+(?:-[a-z0-9]+)*)(?:\.md)?/g;
+// 옛 폴더명을 단어로 앞에 붙인 참조: `works task-foo`, `works [[task-foo]]`
+const WORKS_WORD_RE = /(?<![\w/-])works\s+(?:\[\[)?(?:bug|task|epic)-/g;
+// 일감 번호로 보이는 3자리 수의 모양. 숫자만으로는 판정할 수 없으므로 실존 우선순위와 일치할 때만 경고한다.
+// 모양은 sijangajang 마이그레이션에서 실제로 고친 참조 ~300줄을 기준으로 맞췄다.
+// 단위 뒤에 조사가 붙어도("100건에") 단위다. 단, 회귀·일감처럼 단위 글자로 시작하는 낱말은 뺀다.
+const UNITS = '(?:px|ms|dp|pt|kb|mb|x|×|%|개|건|명|원|자|줄|행|초|분|시간|일(?!감)|회(?!귀)|배|폭|년|월|번째|계열)';
+const NUM_SHAPES = [
+  /(?<!\w)\(\s*(?:works\s+)?(\d{3})\s*(?=[):]|,\s)/g, // (490)  (works 170, …)  (490: …)
+  new RegExp(`\\(\\s*(\\d{3})\\s+(?!${UNITS})[가-힣]`, 'g'), // (220 버그 해결)  (090 회귀)  (495 로그 참조)
+  /\([^()]*[가-힣][^()]*(?<!\d),\s*(\d{3})\)/g, // (상품명 LIKE, 490)
+  /(?:—|–|\/\/|^\s*\*|^#+)\s+(\d{3})(?=[\s.,)]|$)/g, // — 080.  // 060 회귀  * 490 —  ## 090
+  /(?<![\w.,:=~])(\d{3})\s*(?:과의|와의|과|와|도|은|는|을|를|의)(?=\s)/g, // 450 도 함께, 090 과의 관계
+  new RegExp(`(?:은|는)\\s+(\\d{3})(?![\\d.,%])(?!\\s*${UNITS})`, 'g'), // \`q\` 는 490, 2종은 480
+  /(?<![\w.])(\d{3})[(=](?=[가-힣\w])/g, // 060(하단 바…)  200(스모크)  495=apps/mobile
+  /^source:\s*["']?(\d{3})(?!\d)/g, // 프론트매터 source: 080 수정 중 …
+];
+// 일감 본문 안에서는 모양을 따지지 않는다 — 단위가 붙지 않은 우선순위 값이면 경고 ("080 전수 확인에서").
+// 측정값(표·부등호·연속된 수·단위)은 뺀다.
+const TICKET_NUM_RE = new RegExp(`(?<![\\w.,:/#+=~×(<>≤≥→-]|[=~<>≤≥/→]\\s|x\\s?|\\d\\s{1,4})(\\d{3})(?![\\w.,%:/×~-])(?!\\s*${UNITS})(?!\\s*[|)/])(?!\\s+\\d)`, 'g');
+// 한글 주석이 있는 줄의 \`product_id(490)\` — 한글이 없는 줄의 \`toBe(100)\` 같은 코드 인자와 구분한다.
+const WORD_PAREN_RE = /\w\((\d{3})\)(?!\.)/g;
+const NUM_LIST_RE = /(?<![\w/.])\d{3}(?:\/\d{3})+(?![\d/])/g; // 460/480/490
+const HTTP_CODES = new Set(['200', '201', '204', '301', '302', '304', '400', '401', '403', '404', '405', '409', '410', '422', '429', '500', '502', '503', '504']);
 const LOG_HEADING_RE = /^## 진행 로그/m;
 const LOG_LINE_RE = /^- \d{4}-\d{2}-\d{2}/m;
 const SKIP_DIRS = new Set(['node_modules', '.git', 'dist', 'build', '.next', '.svelte-kit', '.dart_tool', '.wrangler', 'coverage', 'tmp']);
@@ -157,17 +182,22 @@ function fileName(t, { date = t.date, priority = t.priority } = {}) {
 
 // ---------- 본문 편집 ----------
 
-function appendLog(t, text) {
+function appendLog(t, text, date = today()) {
   let body = readText(t.md);
   if (body === null) fail(`읽을 수 없음: ${t.md}`);
   body = body.replace(/\s+$/, '');
   if (!LOG_HEADING_RE.test(body)) body += '\n\n---\n\n## 진행 로그\n';
-  body += `\n- ${today()}: ${text}\n`;
+  body += `\n- ${date}: ${text}\n`;
   fs.writeFileSync(t.md, body);
 }
 
 function uncheckedItems(t) {
   return (readText(t.md) ?? '').split('\n').filter((l) => /^\s*[-*] \[ \]/.test(l)).map((l) => l.trim());
+}
+
+// 프론트매터 값. `[[이름]]` 으로 시작하면 YAML 이 리스트로 읽으므로 따옴표로 감싼다.
+function yamlScalar(v) {
+  return /^[[\]{}"'*&!|>%@`#]|: | #/.test(v) ? JSON.stringify(v) : v;
 }
 
 function render(template, vars) {
@@ -188,6 +218,7 @@ function cmdInit(ctx) {
     console.log(`${rel(ctx, readme)} 가 이미 있다 — 규칙을 적어 둔 문서라면 rules.md 와 정본이 둘이 되니 포인터로 교체하라.`);
   } else {
     fs.writeFileSync(readme, pointerReadme(ctx));
+    console.log(`포인터 생성: ${rel(ctx, readme)}`);
   }
   console.log(`준비됨: ${rel(ctx, ctx.dir)}/{todo,doing,done}`);
 }
@@ -222,7 +253,7 @@ function cmdNew(ctx, pos, opt) {
     parent = epic.abs;
   }
 
-  const vars = { type, created: today(), source: opt.source, title: opt.title ?? name };
+  const vars = { type, created: today(), source: yamlScalar(opt.source), title: opt.title ?? name };
   const template = readText(path.join(SKILL_DIR, 'template.md'));
   let target;
   if (type === 'epic') {
@@ -273,12 +304,14 @@ function cmdStart(ctx, pos) {
   console.log(`착수: ${rel(ctx, to)}`);
 }
 
-function cmdLog(ctx, pos) {
+function cmdLog(ctx, pos, opt) {
   const [raw, ...rest] = pos;
   const text = rest.join(' ').trim();
   if (!text) fail('로그 내용을 지정하라');
+  // 지난 일을 옮겨 적을 때 (예: 마이그레이션 중 취소 사유 기록)
+  if (opt.date !== undefined && !/^\d{4}-\d{2}-\d{2}$/.test(opt.date)) fail('--date 는 YYYY-MM-DD');
   const t = find(load(ctx), raw);
-  appendLog(t, text);
+  appendLog(t, text, opt.date);
   console.log(`로그 추가: ${t.name}`);
 }
 
@@ -395,24 +428,53 @@ function cmdLint(ctx) {
 
   // 저장소 전체 참조 검사
   const names = new Set(tickets.map((t) => t.name));
+  const priorities = new Set(tickets.map((t) => t.priority));
+  const ticketsRel = rel(ctx, ctx.dir).split(path.sep).join('/');
   const own = new Map(tickets.map((t) => [rel(ctx, t.md).split(path.sep).join('/'), t.name]));
   for (const file of listFiles(ctx)) {
     const text = readText(path.join(ctx.root, file));
     if (text === null || text.includes('\u0000')) continue;
-    text.split('\n').forEach((line, i) => {
+    const lines = text.split('\n');
+    const inTickets = file.startsWith(`${ticketsRel}/`) && file.endsWith('.md');
+    const fmEnd = lines[0] === '---' ? lines.indexOf('---', 1) : -1;
+    lines.forEach((line, i) => {
       const where = `${file}:${i + 1}`;
+      const fmKey = i > 0 && i < fmEnd ? line.match(/^(\w+):\s*/)?.[0] : null;
+      const covered = []; // 이미 보고한 구간 — 같은 번호를 두 번 보고하지 않는다
+      const cover = (m) => covered.push([m.index, m.index + m[0].length]);
+      const isCovered = (at) => covered.some(([a, b]) => at >= a && at < b);
+
+      if (fmKey && line.slice(fmKey.length).startsWith('[[')) {
+        add('error', where, `프론트매터 값이 '[[' 로 시작한다 — YAML 리스트로 파싱된다. ${fmKey.trim()} "${line.slice(fmKey.length).replaceAll('"', '\\"')}" 처럼 따옴표로 감싼다`);
+      }
       for (const m of line.matchAll(REF_RE)) {
+        cover(m);
         if (!names.has(m[1])) add('error', where, `없는 일감 참조 [[${m[1]}]]${suggest(tickets, m[1])}`);
       }
       for (const m of line.matchAll(NUM_SUFFIX_RE)) {
+        cover(m);
         add('warn', where, `번호를 덧붙인 참조 '${m[0]}' — [[${m[1]}]] 만 쓴다`);
       }
-      checkPaths(ctx, tickets, line, where, add);
+      checkPaths(ctx, tickets, line, where, add, cover);
+      for (const m of line.matchAll(FILENAME_RE)) {
+        if (isCovered(m.index)) continue;
+        cover(m);
+        add('error', where, `파일명으로 된 일감 참조 '${m[0]}' — [[이름]] 으로${candidates(tickets, { name: m[2] })}`);
+      }
+      for (const m of line.matchAll(WORKS_WORD_RE)) {
+        add('warn', where, `옛 폴더명 'works' 가 붙은 참조 '${m[0]}…' — 'works' 를 빼고 [[이름]] 만`);
+      }
       for (const m of line.matchAll(PROSE_NUM_RE)) {
+        cover(m);
         add('warn', where, `번호로 부른 일감 '${m[0].trim()}' — [[이름]] 으로${candidates(tickets, { num: m[1] ?? m[2] })}`);
       }
+      for (const n of numberRefs(line, priorities, isCovered, inTickets)) {
+        add('warn', where, `일감 번호로 보이는 '${n}' — 일감이면 [[이름]] 으로${candidates(tickets, { num: n })} (일감이 아니면 무시)`);
+      }
       for (const m of line.matchAll(BARE_RE)) {
-        if (names.has(m[1]) && own.get(file) !== m[1]) add('warn', where, `[[ ]] 없이 쓴 일감 이름 '${m[1]}' — [[${m[1]}]] 로`);
+        if (!names.has(m[1]) || own.get(file) === m[1]) continue;
+        const fix = fmKey ? `${fmKey.trim()} "…[[${m[1]}]]…" (프론트매터는 따옴표로)` : `[[${m[1]}]]`;
+        add('warn', where, `[[ ]] 없이 쓴 일감 이름 '${m[1]}' — ${fix} 로`);
       }
     });
   }
@@ -424,7 +486,25 @@ function cmdLint(ctx) {
   if (errors.length) process.exit(1);
 }
 
-function checkPaths(ctx, tickets, line, where, add) {
+// 모양(NUM_SHAPES·NUM_LIST_RE)과 실존 우선순위가 둘 다 맞는 3자리 수. HTTP 상태 코드는 뺀다 (코드 주석 오탐).
+function numberRefs(line, priorities, isCovered, inTickets) {
+  const found = new Set();
+  const ok = (n, at) => priorities.has(n) && !HTTP_CODES.has(n) && !isCovered(at);
+  const shapes = [...NUM_SHAPES, ...(inTickets ? [TICKET_NUM_RE] : []), ...(/[가-힣]/.test(line) ? [WORD_PAREN_RE] : [])];
+  for (const re of shapes) {
+    for (const m of line.matchAll(re)) {
+      const at = m.index + m[0].indexOf(m[1]);
+      if (ok(m[1], at)) found.add(m[1]);
+    }
+  }
+  for (const m of line.matchAll(NUM_LIST_RE)) {
+    const nums = m[0].split('/');
+    if (nums.every((n) => priorities.has(n) && !HTTP_CODES.has(n))) nums.filter((n) => ok(n, m.index)).forEach((n) => found.add(n));
+  }
+  return found;
+}
+
+function checkPaths(ctx, tickets, line, where, add, cover) {
   let pathFound = false;
   for (const m of line.matchAll(PATH_RE)) {
     const [, base, status] = m;
@@ -439,6 +519,7 @@ function checkPaths(ctx, tickets, line, where, add) {
     }
     if (base === 'tickets' && !status) continue; // 상태 폴더 없는 tickets/<n> 은 다른 의미일 수 있다 (API 경로 등)
     pathFound = true;
+    cover({ index: m.index, 0: `${m[0]}${tail}` });
     add('error', where, `경로로 된 일감 참조 '${`${m[0]}${tail}`.trim()}' — [[이름]] 으로${candidates(tickets, spec)}`);
   }
   const legacy = !pathFound && line.match(LEGACY_DIR_RE);
@@ -510,7 +591,7 @@ const USAGE = `repo-tickets v${VERSION} — docs/tickets/ 일감 관리 (규칙:
   init
   new <bug|task|epic> <slug> --source "<근거>" [--priority N] [--title T] [--epic <에픽 이름>]
   start <이름>
-  log <이름> "<내용>"
+  log <이름> "<내용>" [--date YYYY-MM-DD]
   stop <이름> "<사유>"
   done <이름> [--cancel "<사유>"]
   prio <이름> <N>

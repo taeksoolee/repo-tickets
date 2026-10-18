@@ -72,7 +72,14 @@ description 에 "Jira·Notion 등 외부 트래커가 아니라 저장소 안 do
    파일럿 피드백 → v0.2.0: gitignore 예시 버그(`.claude/skills/` 는 예외 불가 → `.claude/skills/*`),
    CI 예시를 node24 액션(@v7)·고정 러너로, SKILL.md/rules.md 실행 경로 통일, 자연어 번호 참조("080 티켓") lint 경고,
    옛 폴더 언급이 커밋을 가리킬 수 있음·진입 블록 위치·피어 세션 요청 시 사용자 직접 확인을 절차에 추가.
-   evcaro 는 v0.2.0 재설치(설치본 갱신 커밋) 필요 — sijangajang 반영 후 한 번에. evcaro 는 참조 4곳으로 작고 `.gitignore` 예외라는
+   sijangajang ✅ (2026-10-18, sijangajang 세션이 수행, develop 로컬 커밋 20e3ec1·6c629be·2ea7e4c, push 안 함).
+   피드백 → v0.3.0: **v0.2.0 lint 는 0/0 인데 수동 정리가 ~100곳 남았다** — "lint 통과 = 완료" 가 거짓이었다.
+   보강: 파일명 참조(`150_task-foo.md`) 오류, 일감 번호로 보이는 3자리 수 경고(모양 + 실존 우선순위 일치, HTTP 코드 제외,
+   일감 본문은 더 넓게), `works task-foo` 경고, 프론트매터 `[[` 미인용 오류(YAML 리스트로 파싱됨), `new --source` 자동 인용,
+   `log --date`, 외부 노출 문자열 규칙. 검증: sijangajang 수정 직전 스냅샷(6c629be)에 돌려 실제 수정 줄 대비
+   211줄 중 207줄 적중, 진짜 오탐 1, 놓침 2(한글 없는 코드 주석·HTTP 코드와 겹치는 200). 새 lint 가 evcaro 3곳·sijangajang 3곳의
+   남은 번호 참조를 찾음. wanderpin 은 미인용 `[[` 프론트매터·파일명 참조가 새로 오류로 잡힘.
+   evcaro·sijangajang 은 v0.3.0 재설치 + 남은 참조 정리 필요. evcaro 는 참조 4곳으로 작고 `.gitignore` 예외라는
    설치 특수 케이스가 있어 파일럿에 적합.
    - 사전 조건: 작업 트리 깨끗할 것 (evcaro 에 미커밋 `docs/works/todo/` 있음 — 먼저 커밋 여부 결정),
      열린 브랜치 없음 확인. 작업 브랜치: sijangajang `develop`, evcaro `master`.
