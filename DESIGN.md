@@ -79,7 +79,10 @@ description 에 "Jira·Notion 등 외부 트래커가 아니라 저장소 안 do
    `log --date`, 외부 노출 문자열 규칙. 검증: sijangajang 수정 직전 스냅샷(6c629be)에 돌려 실제 수정 줄 대비
    211줄 중 207줄 적중, 진짜 오탐 1, 놓침 2(한글 없는 코드 주석·HTTP 코드와 겹치는 200). 새 lint 가 evcaro 3곳·sijangajang 3곳의
    남은 번호 참조를 찾음. wanderpin 은 미인용 `[[` 프론트매터·파일명 참조가 새로 오류로 잡힘.
-   evcaro·sijangajang 은 v0.3.0 재설치 + 남은 참조 정리 필요. evcaro 는 참조 4곳으로 작고 `.gitignore` 예외라는
+   이후 v0.3.1(무시 표기 `tickets-lint-ignore`·코드 스팬 제외), v0.3.2(HTTP 제외 축소·`150·200` 묶음·후보에 상태·날짜).
+   **완료 (2026-10-18)**: 두 저장소 모두 v0.3.2 설치, lint 0/0, 새 피드백 없음.
+   evcaro 는 전부 push(그쪽 사용자 지시). sijangajang 은 이관 커밋 push, v0.3.2 재설치 커밋 1522b5c 는 그쪽 사용자 지시로 보류.
+   남은 한계: 흔한 HTTP 코드와 겹치는 번호(`(200에서 처리)`), 한글 없는 코드 주석의 `name(490)`. evcaro 는 참조 4곳으로 작고 `.gitignore` 예외라는
    설치 특수 케이스가 있어 파일럿에 적합.
    - 사전 조건: 작업 트리 깨끗할 것 (evcaro 에 미커밋 `docs/works/todo/` 있음 — 먼저 커밋 여부 결정),
      열린 브랜치 없음 확인. 작업 브랜치: sijangajang `develop`, evcaro `master`.
