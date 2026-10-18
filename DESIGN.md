@@ -1,6 +1,6 @@
 # repo-tickets — 설계 결정
 
-sijangajang·evcaro 에서 쓰던 "저장소 안 md 파일 일감 관리"를 재사용 가능한 skill 로 뽑는다.
+sijangajang·evcaro·wanderpin(travel-map) 에서 쓰던 "저장소 안 md 파일 일감 관리"를 재사용 가능한 skill 로 뽑는다.
 목적: **누가(어떤 사람·세션이) AI 를 돌려도 같은 방식으로 일감을 다루게 한다.**
 
 ## 확정 (2026-10-18)
@@ -66,8 +66,13 @@ description 에 "Jira·Notion 등 외부 트래커가 아니라 저장소 안 do
 1. **skill 작성** ✅ (2026-10-18) — 이 저장소 `git init` → skill 작성 → 임시 디렉터리에서 init~done 전체 흐름 테스트.
    **합격 기준**: 두 저장소에 `lint --dir docs/works` 읽기 전용 실행 시 위 경로 참조(sijangajang ~25곳, evcaro 4곳)와
    `[[epic-data-migration]]` 이 빠짐없이 나오고, `[[cmdk-*]]` 오탐이 없을 것.
-2. **GitHub 공개** (push 전 확인) → 빈 임시 디렉터리에서 실제 `npx -y skills add …` 로 설치 검증.
-3. **저장소별 적용 — evcaro 먼저(파일럿), 그다음 sijangajang.** evcaro 는 참조 4곳으로 작고 `.gitignore` 예외라는
+2. **GitHub 공개** ✅ (2026-10-18, public `taeksoolee/repo-tickets`, 실제 `npx skills add` 설치 검증 완료) (push 전 확인) → 빈 임시 디렉터리에서 실제 `npx -y skills add …` 로 설치 검증.
+3. **저장소별 적용 — evcaro 먼저(파일럿), 그다음 sijangajang.**
+   evcaro ✅ (2026-10-18, evcaro 세션이 수행, 로컬 커밋 05c3ed0·fe4cdf9·7bffbe0·1bd7ea1, push 안 함, lint 0/0).
+   파일럿 피드백 → v0.2.0: gitignore 예시 버그(`.claude/skills/` 는 예외 불가 → `.claude/skills/*`),
+   CI 예시를 node24 액션(@v7)·고정 러너로, SKILL.md/rules.md 실행 경로 통일, 자연어 번호 참조("080 티켓") lint 경고,
+   옛 폴더 언급이 커밋을 가리킬 수 있음·진입 블록 위치·피어 세션 요청 시 사용자 직접 확인을 절차에 추가.
+   evcaro 는 v0.2.0 재설치(설치본 갱신 커밋) 필요 — sijangajang 반영 후 한 번에. evcaro 는 참조 4곳으로 작고 `.gitignore` 예외라는
    설치 특수 케이스가 있어 파일럿에 적합.
    - 사전 조건: 작업 트리 깨끗할 것 (evcaro 에 미커밋 `docs/works/todo/` 있음 — 먼저 커밋 여부 결정),
      열린 브랜치 없음 확인. 작업 브랜치: sijangajang `develop`, evcaro `master`.
@@ -77,3 +82,8 @@ description 에 "Jira·Notion 등 외부 트래커가 아니라 저장소 안 do
      내용 수정을 섞지 않는다 (rename 검출 유지 → 히스토리 보존).
    - 커밋 ③ 참조 교체(경로·번호 → `[[슬러그]]`, lint 후보 보고 확정), 에픽 취소 사유를 에픽 README 로그로,
      CLAUDE.md·README 의 `docs/works` 언급 → 진입 블록 교체, `docs/tickets/README.md` → skill 가리키는 한 줄, lint 통과.
+4. **wanderpin (`travel-map/wanderpin`) 적용 — sijangajang 다음.** 같은 `docs/works` 체계(규칙 README 는 sijangajang 판의
+   축약본이라 rules.md 가 상위 집합). 읽기 전용 lint: 오류 1(CLAUDE.md 의 예시 `[[task-slug]]` — 진입 블록 교체로 사라짐),
+   경고 7(CLAUDE.md 폴더 언급 3, done 일감의 맨 이름 4). 경로 참조 0 이라 가장 쉽다.
+   - 사전 조건: `feat/kakao-maps` 브랜치(main 대비 17커밋, doing 에픽 `epic-kakao-maps` 진행 중)가 **main 에 머지된 뒤** 적용.
+     브랜치 진행 중에 폴더를 옮기면 그 브랜치의 일감 편집과 충돌한다.

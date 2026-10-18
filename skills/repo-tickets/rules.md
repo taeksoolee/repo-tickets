@@ -1,11 +1,12 @@
-<!-- repo-tickets v0.1.0 -->
+<!-- repo-tickets v0.2.0 -->
 # repo-tickets — 일감 관리 규칙
 
 JIRA 대신 저장소 안 md 파일로 일감을 관리한다. 상태는 디렉터리 위치가 말한다:
 `docs/tickets/todo/ → doing/ → done/`.
 
 기계적 동작(파일 생성·이동·로그 추가·검사)은 손으로 하지 말고 스크립트를 쓴다 —
-사람·세션이 달라도 결과가 같아야 하기 때문이다. 스크립트 경로는 이 파일 옆 `scripts/tickets.mjs`.
+사람·세션이 달라도 결과가 같아야 하기 때문이다. 스크립트는 이 파일 옆 `scripts/tickets.mjs` 이고,
+**저장소 루트에서** 설치 경로로 실행한다 (Claude Code 설치 기준 `.claude/skills/repo-tickets/scripts/tickets.mjs`).
 
 ```sh
 T=.claude/skills/repo-tickets/scripts/tickets.mjs   # 설치 위치에 맞게
@@ -26,7 +27,7 @@ node $T lint
 - **일감의 이름은 `<type>-<slug>`** 다 (예: `task-api-rate-limiting`). 저장소 전체에서 유일하다.
 - **일감 참조는 어디서든 `[[<type>-<slug>]]` 로만 한다** — 문서·코드 주석·커밋 메시지·대화 전부.
   - 경로(`docs/tickets/todo/150_…`)로 참조하지 않는다. 일감은 상태가 바뀔 때마다 이동하므로 경로는 반드시 깨진다.
-  - 번호(`150`)로 부르지 않는다. 번호는 ID가 아니라 우선순위라서 바뀌고 중복된다.
+  - 번호(`150`, "150 티켓")로 부르지 않는다. 번호는 ID가 아니라 우선순위라서 바뀌고 중복된다.
     `[[task-api-rate-limiting]](150)` 처럼 번호를 덧붙이지도 않는다.
 - **이름은 만든 뒤 바꾸지 않는다.** 취소·보류·범위 변경 같은 상태는 이름이 아니라 진행 로그에 쓴다.
   (`epic-foo` 를 `epic-foo-cancelled` 로 바꾸면 `[[epic-foo]]` 참조가 전부 깨진다.)
@@ -74,7 +75,7 @@ node $T lint
 
 ## 스크립트
 
-`node scripts/tickets.mjs <명령>` — 저장소 루트에서 실행. git 저장소면 이동은 `git mv` 로 한다.
+`node .claude/skills/repo-tickets/scripts/tickets.mjs <명령>` — 저장소 루트에서 실행. git 저장소면 이동은 `git mv` 로 한다.
 
 | 명령 | 하는 일 |
 |---|---|
@@ -94,4 +95,5 @@ node $T lint
   (`works|tickets` 아래 `todo|doing|done` 경로, 번호 포함). 경로 참조는 후보 이름을 함께 제시한다 —
   번호는 중복되므로 자동 치환하지 않는다. 후보를 보고 사람/AI 가 확정한다.
 - 경고: 진행 로그 없는 doing 일감, 프론트매터 누락, `[[이름]](번호)` 처럼 번호를 덧붙인 참조,
+  "080 티켓"·"일감 150" 처럼 자연어로 번호를 부른 참조,
   `[[ ]]` 없이 맨 이름으로 쓴 일감 이름, 옛 `docs/works` 폴더 언급.

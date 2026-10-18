@@ -20,6 +20,8 @@ const PATH_RE = /(?<![A-Za-z0-9_-])(works|tickets)\/(?:(todo|doing|done)\b)?/g;
 const LEGACY_DIR_RE = /(?<![A-Za-z0-9_-])docs\/works\b/;
 // [[ ]] 밖에 맨 이름으로 쓴 일감 이름. 파일명(`150_task-…`)·경로 안의 이름은 경로 검사가 맡는다.
 const BARE_RE = /(?<![\w/[-])((?:bug|task|epic)-[a-z0-9]+(?:-[a-z0-9]+)*)(?![\w-]|\]\])/g;
+// 자연어 번호 참조: "080 티켓", "티켓 150", "150번 일감". 번호는 우선순위라 참조로 쓸 수 없다.
+const PROSE_NUM_RE = /(?:티켓|일감|ticket)\s*#?(\d{3})(?!\d)|(?<![\d.,:])(\d{3})\s*(?:번\s*)?(?:티켓|일감)/gi;
 const LOG_HEADING_RE = /^## 진행 로그/m;
 const LOG_LINE_RE = /^- \d{4}-\d{2}-\d{2}/m;
 const SKIP_DIRS = new Set(['node_modules', '.git', 'dist', 'build', '.next', '.svelte-kit', '.dart_tool', '.wrangler', 'coverage', 'tmp']);
@@ -406,6 +408,9 @@ function cmdLint(ctx) {
         add('warn', where, `번호를 덧붙인 참조 '${m[0]}' — [[${m[1]}]] 만 쓴다`);
       }
       checkPaths(ctx, tickets, line, where, add);
+      for (const m of line.matchAll(PROSE_NUM_RE)) {
+        add('warn', where, `번호로 부른 일감 '${m[0].trim()}' — [[이름]] 으로${candidates(tickets, { num: m[1] ?? m[2] })}`);
+      }
       for (const m of line.matchAll(BARE_RE)) {
         if (names.has(m[1]) && own.get(file) !== m[1]) add('warn', where, `[[ ]] 없이 쓴 일감 이름 '${m[1]}' — [[${m[1]}]] 로`);
       }

@@ -7,6 +7,7 @@ description: 저장소 안 docs/tickets/{todo,doing,done}/ 의 md 파일로 일�
 
 이 저장소의 일감은 `docs/tickets/` 아래 md 파일이다. **작업 전에 같은 폴더의 `rules.md` 를 읽고 그대로 따른다.**
 
-- 생성·이동·로그·검사는 손으로 하지 말고 `scripts/tickets.mjs` 를 쓴다 (사용법은 rules.md).
+- 생성·이동·로그·검사는 손으로 하지 말고 이 skill 의 `scripts/tickets.mjs` 를 **저장소 루트에서** 실행한다
+  (설치 위치 기준 `node .claude/skills/repo-tickets/scripts/tickets.mjs <명령>`, 사용법은 rules.md).
 - 일감은 어디서든 `[[<type>-<slug>]]` 로만 부른다. 경로·번호로 부르지 않는다.
-- 일감 파일을 고치거나 참조를 바꿨으면 끝내기 전에 `node scripts/tickets.mjs lint` 를 통과시킨다.
+- 일감 파일을 고치거나 참조를 바꿨으면 끝내기 전에 `lint` 를 통과시킨다.
