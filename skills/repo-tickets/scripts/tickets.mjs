@@ -597,6 +597,9 @@ function listFiles(ctx) {
   }
   const skillRel = path.relative(ctx.root, SKILL_DIR).split(path.sep).join('/');
   return files.filter((f) => {
+    // 설치된 skill(.claude/skills/*, .agents/skills/* 등)은 그 skill 저장소가 정본이다 — 이 저장소의 일감 규칙 대상이 아니다.
+    // 다른 skill 의 문서 예시([[task-…]])가 없는 일감 참조 오류를 내면 고칠 방법이 없다.
+    if (/(^|\/)\.[\w-]+\/skills\//.test(f)) return false;
     if (/(^|\/)skills\/repo-tickets\//.test(f)) return false;
     if (!skillRel.startsWith('..') && f.startsWith(`${skillRel}/`)) return false;
     try { return fs.statSync(path.join(ctx.root, f)).size < 2 << 20; } catch { return false; }

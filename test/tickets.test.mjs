@@ -212,11 +212,13 @@ test('lint: 측정값·코드 인자·HTTP 코드·무시 표기는 잡지 않�
   assert.deepEqual(flagged, []);
 });
 
-test('lint: 깨끗한 저장소는 0/0, skill 설치본은 검사하지 않는다', () => {
+test('lint: 깨끗한 저장소는 0/0, skill 설치본(다른 skill 포함)은 검사하지 않는다', () => {
   const d = repo();
   ok(d, 'init');
   ok(d, 'new', 'task', 'alpha', '--source', 's');
   write(d, '.claude/skills/repo-tickets/rules.md', '[[task-nope]] docs/works/todo/150_task-x.md\n');
+  write(d, '.claude/skills/other-skill/rules.md', '예시: [[task-example]] (150)\n'); // 다른 skill 설치본도 제외
+  write(d, '.agents/skills/other-skill/SKILL.md', '[[bug-example]]\n');
   write(d, 'src/a.ts', '// [[task-alpha]] 참고\n');
   assert.match(ok(d, 'lint'), /오류 0, 경고 0/);
 });

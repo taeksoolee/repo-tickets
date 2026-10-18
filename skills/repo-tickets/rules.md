@@ -1,4 +1,4 @@
-<!-- repo-tickets v0.3.3 -->
+<!-- repo-tickets v0.3.4 -->
 # repo-tickets — 일감 관리 규칙
 
 JIRA 대신 저장소 안 md 파일로 일감을 관리한다. 상태는 디렉터리 위치가 말한다:
@@ -94,7 +94,7 @@ node $T lint
 | `list [todo\|doing\|done]` | 상태별 목록 (처리 순서대로) |
 | `lint [--dir <경로>]` | 규칙 검사. 오류가 있으면 종료 코드 1 |
 
-`lint` 가 보는 것 (작업 트리만, git 히스토리는 보지 않음):
+`lint` 가 보는 것 (작업 트리만, git 히스토리는 보지 않음. 설치된 skill 폴더 `.claude/skills/` 등은 제외):
 
 - 오류: 이름 형식 위반, 이름 중복, 존재하지 않는 `[[…]]` 참조, 경로로 된 일감 참조
   (`works|tickets` 아래 `todo|doing|done` 경로, 번호 포함), 파일명으로 된 참조(`150_task-foo.md`),

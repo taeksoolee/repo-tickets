@@ -7,6 +7,13 @@
 - **MINOR**: 새 규칙·새 명령·lint 검사 추가 (재설치 후 새 경고가 나올 수 있다)
 - **PATCH**: lint 정확도 개선·버그 수정·문서
 
+## v0.3.4 — 2026-10-18
+
+> Lint no longer scans other installed skills (`.claude/skills/*`, `.agents/skills/*`), whose doc examples caused unfixable errors.
+
+- lint 대상에서 설치된 skill 폴더 전부 제외 — 다른 skill 문서의 예시 `[[task-…]]` 가 "없는 일감 참조" 오류를 내서,
+  함께 설치하면 lint 가 항상 실패하던 문제 (설치본은 고칠 수 없고 오류는 무시 표기로도 못 끈다).
+
 ## v0.3.3 — 2026-10-18
 
 > Open-source housekeeping: MIT license, test suite with CI, changelog and tagged releases. No rule changes.

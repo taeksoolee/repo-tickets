@@ -27,7 +27,7 @@ npx -y skills add taeksoolee/repo-tickets --skill repo-tickets --agent claude-co
 특정 버전으로 고정하려면 태그를 붙인다 (버전 목록과 변경 내역: [Releases](https://github.com/taeksoolee/repo-tickets/releases), [CHANGELOG](CHANGELOG.md)):
 
 ```sh
-npx -y skills add "taeksoolee/repo-tickets#v0.3.3" --skill repo-tickets --agent claude-code --copy --yes
+npx -y skills add "taeksoolee/repo-tickets#v0.3.4" --skill repo-tickets --agent claude-code --copy --yes
 ```
 
 `.claude/skills/repo-tickets/` 에 복사된다. **설치본은 저장소에 커밋한다** — 작고, 클론 즉시 동작하고,
