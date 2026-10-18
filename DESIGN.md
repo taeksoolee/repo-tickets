@@ -82,6 +82,8 @@ description 에 "Jira·Notion 등 외부 트래커가 아니라 저장소 안 do
    이후 v0.3.1(무시 표기 `tickets-lint-ignore`·코드 스팬 제외), v0.3.2(HTTP 제외 축소·`150·200` 묶음·후보에 상태·날짜).
    **완료 (2026-10-18)**: 두 저장소 모두 v0.3.2 설치, lint 0/0, 새 피드백 없음.
    evcaro 는 전부 push(그쪽 사용자 지시). sijangajang 은 이관 커밋 push, v0.3.2 재설치 커밋 1522b5c 는 그쪽 사용자 지시로 보류.
+   wanderpin ✅ (2026-10-18, travel-map 세션, 로컬 커밋 3b55b2f·deabe5d·a16832b, lint 0/0, push 는 그쪽 판단).
+   피드백: 저장소 린터(Biome)가 설치본 tickets.mjs 를 검사해 `pnpm check` 실패 → 대상 저장소에서 제외 설정. README 절차에 추가.
    남은 한계: 흔한 HTTP 코드와 겹치는 번호(`(200에서 처리)`), 한글 없는 코드 주석의 `name(490)`. evcaro 는 참조 4곳으로 작고 `.gitignore` 예외라는
    설치 특수 케이스가 있어 파일럿에 적합.
    - 사전 조건: 작업 트리 깨끗할 것 (evcaro 에 미커밋 `docs/works/todo/` 있음 — 먼저 커밋 여부 결정),

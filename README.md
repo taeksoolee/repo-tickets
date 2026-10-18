@@ -90,6 +90,9 @@ jobs:
 **1. 커밋 ① — skill 설치**
 
 - 위 설치 명령. `.claude/skills/` 가 gitignore 돼 있으면 예외 추가 (무시하지 않으면 그대로).
+- 저장소의 린터·포매터(Biome·ESLint·Prettier 등)가 `.claude/skills/` 까지 검사하면 제외 설정을 추가한다
+  (설치본은 고치지 않으므로). 예: Biome `files.includes` 에 `"!!.claude/skills"`, ESLint `ignores`,
+  `.prettierignore`. 사유를 주석으로 남기고 이 커밋에 포함한다.
 - 커밋 메시지 예: `chore: repo-tickets skill 설치`
 
 **2. 커밋 ② — 이동만** (내용 수정을 섞지 않는다 — rename 검출이 유지돼야 히스토리가 이어진다)
