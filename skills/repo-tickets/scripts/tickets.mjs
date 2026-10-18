@@ -47,6 +47,8 @@ const TICKET_NUM_RE = new RegExp(`(?<![\\w.,:/#+=~×(<>≤≥→-]|[=~<>≤≥/�
 const WORD_PAREN_RE = /\w\((\d{3})\)(?!\.)/g;
 const NUM_LIST_RE = /(?<![\w/.])\d{3}(?:\/\d{3})+(?![\d/])/g; // 460/480/490
 const HTTP_CODES = new Set(['200', '201', '204', '301', '302', '304', '400', '401', '403', '404', '405', '409', '410', '422', '429', '500', '502', '503', '504']);
+// 확인한 오탐 경고를 끄는 줄 단위 표기. 오류는 끌 수 없다.
+const IGNORE_MARK = 'tickets-lint-ignore';
 const LOG_HEADING_RE = /^## 진행 로그/m;
 const LOG_LINE_RE = /^- \d{4}-\d{2}-\d{2}/m;
 const SKIP_DIRS = new Set(['node_modules', '.git', 'dist', 'build', '.next', '.svelte-kit', '.dart_tool', '.wrangler', 'coverage', 'tmp']);
@@ -392,7 +394,8 @@ function byPriority(a, b) {
 
 function cmdLint(ctx) {
   const { tickets, problems } = loadTickets(ctx);
-  const add = (level, where, msg) => problems.push({ level, where, msg });
+  const report = (level, where, msg) => problems.push({ level, where, msg });
+  const add = report;
   if (!fs.existsSync(ctx.dir)) fail(`${rel(ctx, ctx.dir)} 가 없다`);
 
   // 이름 중복
@@ -439,10 +442,13 @@ function cmdLint(ctx) {
     const fmEnd = lines[0] === '---' ? lines.indexOf('---', 1) : -1;
     lines.forEach((line, i) => {
       const where = `${file}:${i + 1}`;
+      const ignored = line.includes(IGNORE_MARK);
+      const add = (level, w, msg) => { if (level === 'error' || !ignored) report(level, w, msg); };
       const fmKey = i > 0 && i < fmEnd ? line.match(/^(\w+):\s*/)?.[0] : null;
       const covered = []; // 이미 보고한 구간 — 같은 번호를 두 번 보고하지 않는다
       const cover = (m) => covered.push([m.index, m.index + m[0].length]);
       const isCovered = (at) => covered.some(([a, b]) => at >= a && at < b);
+      const inCode = (at) => [...line.matchAll(/`[^`]*`/g)].some((m) => at > m.index && at < m.index + m[0].length);
 
       if (fmKey && line.slice(fmKey.length).startsWith('[[')) {
         add('error', where, `프론트매터 값이 '[[' 로 시작한다 — YAML 리스트로 파싱된다. ${fmKey.trim()} "${line.slice(fmKey.length).replaceAll('"', '\\"')}" 처럼 따옴표로 감싼다`);
@@ -468,7 +474,7 @@ function cmdLint(ctx) {
         cover(m);
         add('warn', where, `번호로 부른 일감 '${m[0].trim()}' — [[이름]] 으로${candidates(tickets, { num: m[1] ?? m[2] })}`);
       }
-      for (const n of numberRefs(line, priorities, isCovered, inTickets)) {
+      for (const n of numberRefs(line, priorities, (at) => isCovered(at) || inCode(at), inTickets)) {
         add('warn', where, `일감 번호로 보이는 '${n}' — 일감이면 [[이름]] 으로${candidates(tickets, { num: n })} (일감이 아니면 무시)`);
       }
       for (const m of line.matchAll(BARE_RE)) {

@@ -57,6 +57,8 @@ node .claude/skills/repo-tickets/scripts/tickets.mjs init
 
 ## CI (선택)
 
+`lint` 는 오류가 있을 때만 종료 코드 1 이다. 경고(번호 추정 등)는 CI 를 막지 않는다.
+
 ```yaml
 # .github/workflows/tickets.yml
 name: tickets
@@ -108,7 +110,11 @@ jobs:
     `— 060.`) → `[[이름]]`. 맨 이름 → `[[이름]]`. `works task-foo` 는 `works` 도 뺀다.
   - 프론트매터 값이 `[[` 로 시작하게 되면 따옴표로 감싼다 (`source: "[[task-foo]] 후속"`).
   - 밖으로 나가는 문자열(API 스펙 description, UI 문구)은 `[[ ]]` 로 바꾸지 말고 번호·이름을 뺀다.
-  - 번호 경고는 숫자 모양으로 추정한 것이라 측정값 등이 섞인다. 일감이 아니면 그대로 둔다.
+  - 번호 경고는 숫자 모양으로 추정한 것이라 측정값 등이 섞인다. 일감이 아니라고 확인했으면
+    그 줄에 `tickets-lint-ignore` 표기(md 는 `<!-- tickets-lint-ignore -->`)를 달아 끈다.
+  - **이미 적용된 DB 마이그레이션 파일**의 주석을 고칠 때는, 그 마이그레이션 도구가 파일 본문 체크섬을
+    검사하는지 먼저 확인한다 (예: wrangler d1 은 파일명만 기록 → 주석 수정 안전. Flyway·Rails 등 체크섬/
+    해시를 쓰는 도구면 고치지 말고 `tickets-lint-ignore` 로 남긴다). 고친 뒤 로컬에서 재적용이 없는지 확인.
   - 옛 폴더(`docs/works`) 언급이 일감을 가리키지 않을 수도 있다 (커밋·폴더 자체). **사실을 확인하고**
     일감이면 `[[이름]]`, 커밋이면 커밋 해시, 폴더면 `docs/tickets` 로 고친다. lint 후보는 단서일 뿐이다.
   - 되돌린 이름의 취소·보류 사유는 해당 일감 진행 로그에 한 줄로 (`log <이름> "취소 — …" --date <당시 날짜>`).
@@ -116,5 +122,6 @@ jobs:
   README 등 다른 문서의 `docs/works` 언급도 `docs/tickets` 로.
 - `docs/tickets/README.md` (예전 규칙 문서) 를 skill 을 가리키는 한 줄로 교체한다 — 남기면 정본이 둘이 된다.
   `rm docs/tickets/README.md && node $T init` 이 포인터를 만들어 준다.
-- `node $T lint` 가 오류 0 으로 통과할 것. 경고는 전부 확인 — 남기는 경고(일감이 아닌 번호 등)는 이유를 보고한다.
+- `node $T lint` 가 오류 0 으로 통과할 것. 경고는 전부 확인 — 오탐은 무시 표기로 끄고 경고 0 을 만든다.
+  끄지 않고 남기는 경고가 있으면 이유를 보고한다.
 - 커밋 메시지 예: `docs: 일감 참조를 [[슬러그]] 로 통일`
