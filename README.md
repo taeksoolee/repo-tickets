@@ -1,5 +1,15 @@
 # repo-tickets
 
+[![test](https://github.com/taeksoolee/repo-tickets/actions/workflows/test.yml/badge.svg)](https://github.com/taeksoolee/repo-tickets/actions/workflows/test.yml)
+[![release](https://img.shields.io/github/v/release/taeksoolee/repo-tickets)](https://github.com/taeksoolee/repo-tickets/releases)
+[![license](https://img.shields.io/github/license/taeksoolee/repo-tickets)](LICENSE)
+
+> **English summary** — An agent skill (Claude Code tested) for tracking tickets as markdown files inside the
+> repository: `docs/tickets/{todo,doing,done}/<priority>_<type>-<slug>.md`. Tickets are referenced everywhere as
+> `[[<type>-<slug>]]`, never by path or number (numbers are priorities and change). A zero-dependency Node script
+> handles create / start / log / done and a `lint` that catches broken, path-based and number-based references.
+> Rules and docs are in Korean. Install: `npx skills add taeksoolee/repo-tickets --skill repo-tickets`.
+
 저장소 안 `docs/tickets/{todo,doing,done}/` md 파일로 일감을 관리하는 agent skill.
 누가(어떤 사람·세션이) AI 를 돌려도 같은 방식으로 일감을 다루게 하는 것이 목적이다.
 
@@ -11,7 +21,13 @@
 ## 설치
 
 ```sh
-npx -y skills add <owner>/repo-tickets --skill repo-tickets --agent claude-code --copy --yes
+npx -y skills add taeksoolee/repo-tickets --skill repo-tickets --agent claude-code --copy --yes
+```
+
+특정 버전으로 고정하려면 태그를 붙인다 (버전 목록과 변경 내역: [Releases](https://github.com/taeksoolee/repo-tickets/releases), [CHANGELOG](CHANGELOG.md)):
+
+```sh
+npx -y skills add "taeksoolee/repo-tickets#v0.3.3" --skill repo-tickets --agent claude-code --copy --yes
 ```
 
 `.claude/skills/repo-tickets/` 에 복사된다. **설치본은 저장소에 커밋한다** — 작고, 클론 즉시 동작하고,
@@ -128,3 +144,29 @@ jobs:
 - `node $T lint` 가 오류 0 으로 통과할 것. 경고는 전부 확인 — 오탐은 무시 표기로 끄고 경고 0 을 만든다.
   끄지 않고 남기는 경고가 있으면 이유를 보고한다.
 - 커밋 메시지 예: `docs: 일감 참조를 [[슬러그]] 로 통일`
+
+## 개발
+
+```sh
+node --test          # 전체 흐름 + lint 회귀 테스트 (test/)
+```
+
+lint 의 번호 판정은 숫자 모양으로 추정하는 휴리스틱이라 고치면 다른 곳이 깨지기 쉽다.
+판정을 바꿀 때는 `test/tickets.test.mjs` 의 잡아야 할 모양(POSITIVE_*)·잡으면 안 되는 모양(NEGATIVE)에
+예제를 먼저 추가하고 맞춘다. 실사용 저장소의 오탐·누락 사례도 이 목록에 가상 예제로 옮겨 둔다.
+
+## 릴리즈
+
+1. `skills/repo-tickets/rules.md` 첫 줄 버전을 올린다 (규칙은 [CHANGELOG](CHANGELOG.md) 머리말의 MAJOR/MINOR/PATCH 기준).
+2. `CHANGELOG.md` 맨 위에 새 버전 절을 쓴다 — 영어 한 줄 요약(`>`) + 한국어 항목.
+3. 커밋·push 후 태그와 GitHub Release:
+   ```sh
+   v=$(sed -nE '1s/.*repo-tickets (v[0-9.]+).*/\1/p' skills/repo-tickets/rules.md)
+   git tag -a "$v" -m "repo-tickets $v" && git push origin "$v"
+   awk -v v="$v" '$0 ~ "^## "v" " {f=1; next} /^## v/ {f=0} f' CHANGELOG.md | gh release create "$v" --title "$v" --notes-file -
+   ```
+4. 쓰는 저장소는 재설치로 따라온다. MINOR 이상이면 재설치 후 `lint` 에 새 경고가 나올 수 있다.
+
+## 라이선스
+
+[MIT](LICENSE)

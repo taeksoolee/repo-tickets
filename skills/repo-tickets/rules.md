@@ -1,4 +1,4 @@
-<!-- repo-tickets v0.3.2 -->
+<!-- repo-tickets v0.3.3 -->
 # repo-tickets — 일감 관리 규칙
 
 JIRA 대신 저장소 안 md 파일로 일감을 관리한다. 상태는 디렉터리 위치가 말한다:
