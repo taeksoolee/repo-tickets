@@ -28,25 +28,29 @@ const FILENAME_RE = /(?<![\w-])(?:\d{8}_)?(\d{3})_((?:bug|task|epic)-[a-z0-9]+(?
 const WORKS_WORD_RE = /(?<![\w/-])works\s+(?:\[\[)?(?:bug|task|epic)-/g;
 // 일감 번호로 보이는 3자리 수의 모양. 숫자만으로는 판정할 수 없으므로 실존 우선순위와 일치할 때만 경고한다.
 // 모양은 sijangajang 마이그레이션에서 실제로 고친 참조 ~300줄을 기준으로 맞췄다.
-// 단위 뒤에 조사가 붙어도("100건에") 단위다. 단, 회귀·일감처럼 단위 글자로 시작하는 낱말은 뺀다.
-const UNITS = '(?:px|ms|dp|pt|kb|mb|x|×|%|개|건|명|원|자|줄|행|초|분|시간|일(?!감)|회(?!귀)|배|폭|년|월|번째|계열)';
+// 단위 뒤에 조사가 붙어도("100건에") 단위다. 단위 글자로 시작하는 낱말(회귀·배선·일감)은 단위가 아니다.
+const PARTICLE = '(?:에서|에|으로|로|의|을|를|이|가|은|는|도|씩|만|째|대|짜리|까지|부터)';
+const UNITS = `(?:px|ms|dp|pt|[kKmMgG]i?[bB]|x|×|%|(?:개|건|명|원|자|줄|행|초|분|시간|일|회|배|폭|년|월|번째|계열)(?=[^가-힣]|$|${PARTICLE}))`;
 const NUM_SHAPES = [
   /(?<!\w)\(\s*(?:works\s+)?(\d{3})\s*(?=[):]|,\s)/g, // (490)  (works 170, …)  (490: …)
   new RegExp(`\\(\\s*(\\d{3})\\s+(?!${UNITS})[가-힣]`, 'g'), // (220 버그 해결)  (090 회귀)  (495 로그 참조)
   /\([^()]*[가-힣][^()]*(?<!\d),\s*(\d{3})\)/g, // (상품명 LIKE, 490)
+  new RegExp(`\\(\\s*(\\d{3})${PARTICLE}`, 'g'), // (410에서 8종까지 확장
   /(?:—|–|\/\/|^\s*\*|^#+)\s+(\d{3})(?=[\s.,)]|$)/g, // — 080.  // 060 회귀  * 490 —  ## 090
   /(?<![\w.,:=~])(\d{3})\s*(?:과의|와의|과|와|도|은|는|을|를|의)(?=\s)/g, // 450 도 함께, 090 과의 관계
-  new RegExp(`(?:은|는)\\s+(\\d{3})(?![\\d.,%])(?!\\s*${UNITS})`, 'g'), // \`q\` 는 490, 2종은 480
+  new RegExp(`(?:은|는)\\s+(\\d{3})(?![\\d.,%~])(?!\\s*${UNITS})`, 'g'), // \`q\` 는 490, 2종은 480
   /(?<![\w.])(\d{3})[(=](?=[가-힣\w])/g, // 060(하단 바…)  200(스모크)  495=apps/mobile
-  /^source:\s*["']?(\d{3})(?!\d)/g, // 프론트매터 source: 080 수정 중 …
+  new RegExp(`^source:\\s*["']?(\\d{3})(?!\\d)(?!\\s*${UNITS})`, 'g'), // 프론트매터 source: 080 수정 중 …
 ];
 // 일감 본문 안에서는 모양을 따지지 않는다 — 단위가 붙지 않은 우선순위 값이면 경고 ("080 전수 확인에서").
 // 측정값(표·부등호·연속된 수·단위)은 뺀다.
 const TICKET_NUM_RE = new RegExp(`(?<![\\w.,:/#+=~×(<>≤≥→-]|[=~<>≤≥/→]\\s|x\\s?|\\d\\s{1,4})(\\d{3})(?![\\w.,%:/×~-])(?!\\s*${UNITS})(?!\\s*[|)/])(?!\\s+\\d)`, 'g');
 // 한글 주석이 있는 줄의 \`product_id(490)\` — 한글이 없는 줄의 \`toBe(100)\` 같은 코드 인자와 구분한다.
 const WORD_PAREN_RE = /\w\((\d{3})\)(?!\.)/g;
-const NUM_LIST_RE = /(?<![\w/.])\d{3}(?:\/\d{3})+(?![\d/])/g; // 460/480/490
-const HTTP_CODES = new Set(['200', '201', '204', '301', '302', '304', '400', '401', '403', '404', '405', '409', '410', '422', '429', '500', '502', '503', '504']);
+const NUM_LIST_RE = /(?<![\w/.·])\d{3}(?:\/\d{3})+(?![\d/])|(?<![\w/.·])\d{3}(?:·\d{3})+(?![\d·])/g; // 460/480/490, 150·200
+// 흔한 HTTP 상태 코드와 겹치는 번호는 뺀다 — 문맥으로 가리려 했으나 "200을 돌려줬다", "400 차단" 처럼
+// 표현이 다양해 오탐이 컸다. 드문 코드(410·502 …)는 넣지 않는다 (우선순위로 쓰인 사례가 있다).
+const HTTP_CODES = new Set(['200', '201', '204', '400', '401', '403', '404', '409', '422', '429', '500']);
 // 확인한 오탐 경고를 끄는 줄 단위 표기. 오류는 끌 수 없다.
 const IGNORE_MARK = 'tickets-lint-ignore';
 const LOG_HEADING_RE = /^## 진행 로그/m;
@@ -492,10 +496,12 @@ function cmdLint(ctx) {
   if (errors.length) process.exit(1);
 }
 
-// 모양(NUM_SHAPES·NUM_LIST_RE)과 실존 우선순위가 둘 다 맞는 3자리 수. HTTP 상태 코드는 뺀다 (코드 주석 오탐).
+// 모양(NUM_SHAPES·NUM_LIST_RE)과 실존 우선순위가 둘 다 맞는 3자리 수. HTTP 문맥의 상태 코드는 뺀다.
 function numberRefs(line, priorities, isCovered, inTickets) {
   const found = new Set();
-  const ok = (n, at) => priorities.has(n) && !HTTP_CODES.has(n) && !isCovered(at);
+  // 프론트매터 source: 맨 앞 번호는 HTTP 일 리 없다
+  const http = (n) => !/^source:/.test(line) && HTTP_CODES.has(n);
+  const ok = (n, at) => priorities.has(n) && !http(n) && !isCovered(at);
   const shapes = [...NUM_SHAPES, ...(inTickets ? [TICKET_NUM_RE] : []), ...(/[가-힣]/.test(line) ? [WORD_PAREN_RE] : [])];
   for (const re of shapes) {
     for (const m of line.matchAll(re)) {
@@ -504,8 +510,13 @@ function numberRefs(line, priorities, isCovered, inTickets) {
     }
   }
   for (const m of line.matchAll(NUM_LIST_RE)) {
-    const nums = m[0].split('/');
-    if (nums.every((n) => priorities.has(n) && !HTTP_CODES.has(n))) nums.filter((n) => ok(n, m.index)).forEach((n) => found.add(n));
+    const nums = m[0].split(/[/·]/);
+    // `·` 묶음은 HTTP 가 아닌 일감 번호가 하나라도 있으면 전체를 일감 번호로 본다 (150·200).
+    // `/` 묶음은 폰트 굵기(400/700) 같은 값이 흔해 HTTP 코드가 섞이면 건너뛴다.
+    const mixedOk = m[0].includes('·') ? nums.some((n) => !http(n)) : nums.every((n) => !http(n));
+    if (nums.every((n) => priorities.has(n)) && mixedOk) {
+      nums.filter((n) => !isCovered(m.index)).forEach((n) => found.add(n));
+    }
   }
   return found;
 }
@@ -549,7 +560,9 @@ function candidates(tickets, spec) {
     if (tickets.some((t) => t.name === spec.name)) return ` → [[${spec.name}]]`;
     return suggest(tickets, spec.name) || ` (일감 '${spec.name}' 없음)`;
   }
-  const hits = tickets.filter((t) => t.priority === spec.num).map((t) => `[[${t.name}]]`);
+  const same = tickets.filter((t) => t.priority === spec.num);
+  // 번호가 겹치면 상태·날짜를 붙여 문맥으로 고를 수 있게 한다
+  const hits = same.map((t) => (same.length > 1 ? `[[${t.name}]](${t.status}${t.date ? ` ${t.date}` : ''}${t.epic ? `, ${t.epic.name} 안` : ''})` : `[[${t.name}]]`));
   if (hits.length === 0) return ` (우선순위 ${spec.num} 인 일감 없음 — 직접 찾아야 한다)`;
   return hits.length === 1 ? ` → 후보 ${hits[0]}` : ` → 후보 ${hits.join(' / ')} (번호 중복 — 문맥으로 확정)`;
 }
